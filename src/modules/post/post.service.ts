@@ -102,13 +102,13 @@ const getAllPost = async ({
     orderBy: {
       [sortBy]: sortOrder,
     },
-    include:{
-      _count:{
-        select:{
-          comments:true
-        }
-      }
-    }
+    include: {
+      _count: {
+        select: {
+          comments: true,
+        },
+      },
+    },
   });
 
   const total = await prisma.post.count({
@@ -151,37 +151,80 @@ const getPostById = async (postId: string) => {
             parentId: null,
             status: CommentStatus.APPROVED,
           },
-          orderBy:{createdAt:"desc"},
+          orderBy: { createdAt: "desc" },
           include: {
             replies: {
               where: {
                 status: CommentStatus.APPROVED,
               },
-               orderBy:{createdAt:"asc"},
+              orderBy: { createdAt: "asc" },
               include: {
                 replies: {
                   where: {
                     status: CommentStatus.APPROVED,
                   },
-                   orderBy:{createdAt:"asc"},
+                  orderBy: { createdAt: "asc" },
                 },
               },
             },
           },
         },
-        _count:{
-          select:{
-            comments:true
-          }
-        }
+        _count: {
+          select: {
+            comments: true,
+          },
+        },
       },
     });
     return postData;
   });
 };
 
+const getMyPosts = async (authorId: string) => {
+await prisma.user.findUniqueOrThrow({
+    where: {
+      id: authorId,
+      status: "ACTIVE",
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  const result = await prisma.post.findMany({
+    where: {
+      authorId,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    include: {
+      _count: {
+        select: {
+          comments: true,
+        },
+      },
+    },
+  });
+
+  const total = await prisma.post.aggregate({
+    _count: {
+      id: true,
+    },
+    where: {
+      authorId,
+    },
+  });
+
+  return {
+    data: result,
+    total,
+  };
+};
+
 export const postService = {
   createPost,
   getAllPost,
   getPostById,
+  getMyPosts,
 };
